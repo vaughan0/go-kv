@@ -12,6 +12,25 @@ type Table interface {
 	Close()
 }
 
+// Calls t.Get with the byte slice version of key. result will be the empty string if the key was not present.
+func StrGet(t Table, key string) (result string, err error) {
+	value, err := t.Get([]byte(key))
+	if value != nil {
+		result = string(value)
+	}
+	return
+}
+
+// Calls t.Store with the byte slice version of key and value, unless value is the empty string, in
+// which case it will be passed as nil (for deletion).
+func StrStore(t Table, key, value string) error {
+	var byteValue []byte
+	if value != "" {
+		byteValue = []byte(value)
+	}
+	return t.Store([]byte(key), byteValue)
+}
+
 // A key-value database exposes multiple key-value tables.
 type Database interface {
 	// Opens a named table, creating it if it does not already exist.
