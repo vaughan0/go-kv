@@ -5,6 +5,10 @@ func NewMemory() Database {
 	return make(memDatabase)
 }
 
+func NewMemoryTable() Table {
+	return make(memTable)
+}
+
 type memDatabase map[string]memTable
 
 func (m memDatabase) Open(table string) (Table, error) {

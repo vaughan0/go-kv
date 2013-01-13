@@ -6,7 +6,7 @@ import (
 )
 
 // Returns a Database that uses simple table name prefixes to support multiple tables within a single table.
-func TableDatabase(t Table) Database {
+func FromTable(t Table) Database {
 	return kvDatabase{t}
 }
 

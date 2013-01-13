@@ -15,10 +15,12 @@ import (
 	"unsafe"
 )
 
+// Opens a gdbm file as a single Table.
 func OpenTable(file string) (kv.Table, error) {
 	return gdbmOpen(file)
 }
 
+// Returns a database that uses a directory to hold multiple GDBM tables.
 func OpenDatabase(root string) (kv.Database, error) {
 	// Check if root exists
 	info, err := os.Stat(root)
