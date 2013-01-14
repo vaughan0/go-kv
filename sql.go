@@ -52,15 +52,19 @@ Error:
 	return
 }
 
-func (s *SQLDatabase) CreateTable(autoinc bool, keytypes string) (err error) {
+// Creates a new SQL table to hold the key-value data if one does not exist already.
+// If autoinc is true, then the id field will use the AUTOINCREMENT keyword (you don't need this for sqlite).
+// tabletype is the data type for the (kv) table name column.
+// keytype is the data type for the key column.
+func (s *SQLDatabase) CreateTable(autoinc bool, tabletype, keytype string) (err error) {
 
 	query := "CREATE TABLE IF NOT EXISTS " + s.table + " ("
 	query += "id INTEGER PRIMARY KEY"
 	if autoinc {
 		query += " AUTOINCREMENT"
 	}
-	query += ", `group` " + keytypes
-	query += ", key " + keytypes
+	query += ", `group` " + tabletype
+	query += ", key " + keytype
 	query += ", value BLOB)"
 
 	if _, err = s.db.Exec(query); err != nil {
