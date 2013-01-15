@@ -37,6 +37,10 @@ func (k kvDatabase) Remove(table string) error {
 	return errors.New("cannot remove tables from a table-backed database")
 }
 
+func (k kvDatabase) List() ([]string, error) {
+	return nil, errors.New("cannot list tables in a table-backed database")
+}
+
 func (k kvDatabase) Close() {
 	k.backend.Close()
 }
@@ -61,6 +65,20 @@ func (k *kvTable) Get(key []byte) ([]byte, error) {
 func (k *kvTable) Store(key, value []byte) error {
 	key = k.prefixKey(key)
 	return k.backend.Store(key, value)
+}
+
+func (k *kvTable) List() ([][]byte, error) {
+	keys, err := k.backend.List()
+	if err != nil {
+		return nil, err
+	}
+	list := make([][]byte, 0)
+	for _, key := range keys {
+		if bytes.HasPrefix(key, k.prefix) {
+			list = append(list, key[len(k.prefix):])
+		}
+	}
+	return list, nil
 }
 
 func (k *kvTable) Close() {

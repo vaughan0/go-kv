@@ -25,21 +25,50 @@ func (m memDatabase) Remove(table string) error {
 	return nil
 }
 
+func (m memDatabase) List() ([]string, error) {
+	names := make([]string, len(m))
+	i := 0
+	for name, _ := range m {
+		names[i] = name
+		i++
+	}
+	return names, nil
+}
+
 func (m memDatabase) Close() {}
 
 type memTable map[string][]byte
 
-func (m memTable) Get(key []byte) ([]byte, error) {
-	return m[string(key)], nil
+func clone(a []byte) []byte {
+	b := make([]byte, len(a))
+	copy(b, a)
+	return b
+}
+
+func (m memTable) Get(key []byte) (value []byte, err error) {
+	if data := m[string(key)]; data != nil {
+		value = clone(data)
+	}
+	return
 }
 
 func (m memTable) Store(key, value []byte) error {
 	if value == nil {
 		delete(m, string(key))
 	} else {
-		m[string(key)] = value
+		m[string(key)] = clone(value)
 	}
 	return nil
+}
+
+func (m memTable) List() ([][]byte, error) {
+	keys := make([][]byte, len(m))
+	i := 0
+	for key, _ := range m {
+		keys[i] = []byte(key)
+		i++
+	}
+	return keys, nil
 }
 
 func (m memTable) Close() {}

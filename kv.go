@@ -8,6 +8,8 @@ type Table interface {
 	// Stores a value, possibly overwriting any previous value associated with the key.
 	// If value is nil, the key will be removed.
 	Store(key, value []byte) error
+	// Retrieves a list of all keys in the table.
+	List() (keys [][]byte, err error)
 	// Closes the table.
 	Close()
 }
@@ -37,6 +39,8 @@ type Database interface {
 	Open(table string) (Table, error)
 	// Removes a table.
 	Remove(table string) error
+	// Returns a list of table names.
+	List() (tables []string, err error)
 	// Closes the database.
 	Close()
 }

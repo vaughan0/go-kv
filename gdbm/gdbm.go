@@ -12,6 +12,7 @@ import (
 	"github.com/vaughan0/go-kv"
 	"os"
 	"path"
+	"strings"
 	"unsafe"
 )
 
@@ -75,6 +76,25 @@ func (d *gdbmDB) Remove(name string) (err error) {
 	return
 }
 
+func (d *gdbmDB) List() (tables []string, err error) {
+	dir, err := os.Open(d.root)
+	if err != nil {
+		return
+	}
+	entries, err := dir.Readdir(0)
+	if err != nil {
+		return
+	}
+	tables = make([]string, 0)
+	for _, entry := range entries {
+		name := entry.Name()
+		if strings.HasSuffix(name, ".db") {
+			tables = append(tables, name[:len(name)-3])
+		}
+	}
+	return
+}
+
 func (d *gdbmDB) Close() {
 	for _, table := range d.opened {
 		table.closer = nil
@@ -120,6 +140,18 @@ func (d *gdbm) Store(keydata, valuedata []byte) error {
 	value := toDatum(valuedata)
 	C.gdbm_store(d.dbf, key, value, C.GDBM_REPLACE)
 	return nil
+}
+
+func (d *gdbm) List() (keys [][]byte, err error) {
+	keys = make([][]byte, 0)
+	key := C.gdbm_firstkey(d.dbf)
+	for key.dptr != nil {
+		keys = append(keys, fromDatum(key))
+		next := C.gdbm_nextkey(d.dbf, key)
+		C.free(unsafe.Pointer(key.dptr))
+		key = next
+	}
+	return
 }
 
 func (d *gdbm) Close() {
