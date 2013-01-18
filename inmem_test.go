@@ -8,33 +8,46 @@ func TestTableDatabase(t *testing.T) {
 
 	root := NewMemoryTable()
 	db := FromTable(root)
-	fruit, _ := db.Open("fruit")
-	animals, _ := db.Open("animals")
 
-	StrStore(fruit, "apple", "red or green")
-	StrStore(fruit, "banana", "yellow")
-	StrStore(fruit, "dog", "dogs aren't fruit!")
+	data := map[string]map[string]string{
+		"fruit": {
+			"apple":  "red or green",
+			"banana": "yellow",
+			"dog":    "dogs aren't fruit!",
+		},
+		"animals": {
+			"apple": "not really an animal",
+			"dog":   "WOOF!",
+		},
+	}
 
-	StrStore(animals, "dog", "WOOF!")
-	StrStore(animals, "apple", "not really an animal")
+	for group, entries := range data {
+		table, err := db.Open(group)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for key, value := range entries {
+			if err := StrStore(table, key, value); err != nil {
+				t.Fatal(err)
+			}
+		}
+		table.Close()
+	}
 
-	doTest := func(table Table, tests map[string]string) {
-		for key, expect := range tests {
-			if val, _ := StrGet(table, key); val != expect {
-				t.Errorf("incorrect result for '%s': %s (expected %s)", key, val, expect)
+	for group, entries := range data {
+		table, err := db.Open(group)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for key, expect := range entries {
+			value, err := StrGet(table, key)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if value != expect {
+				t.Errorf("incorrect result for %s.%s: %s (expected %s)", group, key, value, expect)
 			}
 		}
 	}
-
-	doTest(fruit, map[string]string{
-		"apple":  "red or green",
-		"banana": "yellow",
-		"dog":    "dogs aren't fruit!",
-	})
-
-	doTest(animals, map[string]string{
-		"apple": "not really an animal",
-		"dog":   "WOOF!",
-	})
 
 }
