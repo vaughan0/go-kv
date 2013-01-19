@@ -8,13 +8,15 @@ import (
 var errSqlNotFound = errors.New("sql row not found")
 
 type SQLDatabase struct {
-	db            *sql.DB
-	table         string
-	getStmt       *sql.Stmt
-	updateStmt    *sql.Stmt
-	insertStmt    *sql.Stmt
-	removeStmt    *sql.Stmt
-	removeAllStmt *sql.Stmt
+	db             *sql.DB
+	table          string
+	getStmt        *sql.Stmt
+	updateStmt     *sql.Stmt
+	insertStmt     *sql.Stmt
+	removeStmt     *sql.Stmt
+	removeAllStmt  *sql.Stmt
+	listTablesStmt *sql.Stmt
+	listKeysStmt   *sql.Stmt
 }
 
 func NewSQL(db *sql.DB, table string) (s *SQLDatabase, err error) {
@@ -40,10 +42,19 @@ func (s *SQLDatabase) check() (err error) {
 		if s.removeAllStmt, err = db.Prepare("DELETE FROM " + table + " WHERE `group` = ?"); err != nil {
 			goto Error
 		}
+		if s.listTablesStmt, err = db.Prepare("SELECT DISTINCT `group` FROM " + table); err != nil {
+			goto Error
+		}
+		if s.listKeysStmt, err = db.Prepare("SELECT DISTINCT key FROM " + table + " WHERE `group` = ?"); err != nil {
+			goto Error
+		}
 	}
 	return nil
 Error:
-	for _, ptr := range []**sql.Stmt{&s.getStmt, &s.updateStmt, &s.insertStmt, &s.removeStmt, &s.removeAllStmt} {
+	for _, ptr := range []**sql.Stmt{
+		&s.getStmt, &s.updateStmt, &s.insertStmt, &s.removeStmt, &s.removeAllStmt,
+		&s.listTablesStmt, &s.listKeysStmt,
+	} {
 		if *ptr != nil {
 			(*ptr).Close()
 			*ptr = nil
@@ -97,6 +108,27 @@ func (s *SQLDatabase) Remove(table string) (err error) {
 	return
 }
 
+func (s *SQLDatabase) List() (tables []string, err error) {
+	if err = s.check(); err != nil {
+		return
+	}
+	rows, err := s.listTablesStmt.Query()
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	tables = make([]string, 0)
+	for rows.Next() {
+		var table string
+		if err = rows.Scan(&table); err != nil {
+			return
+		}
+		tables = append(tables, table)
+	}
+	err = rows.Err()
+	return
+}
+
 func (s *SQLDatabase) get(table, key string) (id int, value []byte, err error) {
 	rows, err := s.getStmt.Query(table, key)
 	if err != nil {
@@ -132,6 +164,23 @@ func (s *SQLDatabase) store(table, key string, value []byte) (err error) {
 	return
 }
 
+func (s *SQLDatabase) list(table string) (keys [][]byte, err error) {
+	rows, err := s.listKeysStmt.Query(table)
+	if err != nil {
+		return
+	}
+	keys = make([][]byte, 0)
+	for rows.Next() {
+		var key []byte
+		if err = rows.Scan(&key); err != nil {
+			return
+		}
+		keys = append(keys, key)
+	}
+	err = rows.Err()
+	return
+}
+
 func (s *SQLDatabase) Close() {
 	s.getStmt.Close()
 	s.updateStmt.Close()
@@ -157,6 +206,10 @@ func (s *sqlTable) Get(key []byte) (value []byte, err error) {
 
 func (s *sqlTable) Store(key, value []byte) (err error) {
 	return s.db.store(s.table, string(key), value)
+}
+
+func (s *sqlTable) List() (keys [][]byte, err error) {
+	return s.db.list(s.table)
 }
 
 func (s *sqlTable) Close() {}
